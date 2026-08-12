@@ -1,0 +1,325 @@
+/* === НАСТРОЙКИ ЦВЕТОВ (CSS VARIABLES) === */
+:root {
+    /* СВЕТЛАЯ ТЕМА (по умолчанию) */
+    --bg-gradient: linear-gradient(135deg, #eef2ff 0%, #f3e8ff 50%, #fdf2f8 100%);
+    
+    --card-bg: rgba(255, 255, 255, 0.75);
+    --card-border: rgba(255, 255, 255, 0.6);
+    --card-shadow: 0 25px 50px -12px rgba(192, 132, 252, 0.25);
+    
+    --text-title: transparent;
+    --text-title-gradient: linear-gradient(to right, #4c1d95, #a21caf);
+    --text-subtitle: #6b7280;
+    --text-label: #4b5563;
+    
+    --input-bg: rgba(255, 255, 255, 0.5);
+    --input-border: rgba(0, 0, 0, 0.1);
+    --input-text: #1f2937;
+    --input-placeholder: #9ca3af;
+    --input-focus-border: #8b5cf6;
+    
+    --icon-color: #6b7280;
+    --icon-hover: #111827;
+    
+    --toggle-bg: #e5e7eb;
+    --toggle-icon: #7c3aed;
+    --toggle-hover: #d1d5db;
+    
+    --link-color: #7c3aed;
+    --link-hover: #a21caf;
+    
+    --btn-secondary-border: rgba(0, 0, 0, 0.1);
+    --btn-secondary-text: #4b5563;
+    --btn-secondary-hover-bg: rgba(0,0,0,0.05);
+    --btn-secondary-hover-text: #111827;
+    
+    --error-bg: rgba(254, 226, 226, 0.5);
+    --error-border: rgba(239, 68, 68, 0.3);
+    --error-text: #b91c1c;
+}
+
+/* ТЕМНАЯ ТЕМА (html.dark) */
+html.dark {
+    --bg-gradient: radial-gradient(ellipse at center, #1a0b2e 0%, #000000 100%);
+    
+    --card-bg: rgba(20, 20, 20, 0.4);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    
+    --text-title: transparent;
+    --text-title-gradient: linear-gradient(to right, #ffffff, #d8b4fe);
+    --text-subtitle: #9ca3af;
+    --text-label: #a1a1aa;
+    
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-text: #ffffff;
+    --input-placeholder: #52525b;
+    --input-focus-border: #c084fc;
+    
+    --icon-color: #71717a;
+    --icon-hover: #ffffff;
+    
+    --toggle-bg: rgba(255, 255, 255, 0.1);
+    --toggle-icon: #c084fc;
+    --toggle-hover: rgba(192, 132, 252, 0.2);
+    
+    --link-color: #d8b4fe;
+    --link-hover: #ffffff;
+    
+    --btn-secondary-border: rgba(255, 255, 255, 0.2);
+    --btn-secondary-text: #d4d4d8;
+    --btn-secondary-hover-bg: rgba(255, 255, 255, 0.05);
+    --btn-secondary-hover-text: #ffffff;
+    
+    --error-bg: rgba(220, 38, 38, 0.15);
+    --error-border: rgba(220, 38, 38, 0.3);
+    --error-text: #fca5a5;
+}
+
+/* === ОСНОВНЫЕ СТИЛИ === */
+body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: var(--bg-gradient);
+    background-size: 200% 200%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--input-text);
+    transition: background 0.5s ease;
+}
+
+/* Кнопка переключения темы */
+.theme-toggle-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: var(--toggle-bg);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+    color: var(--toggle-icon);
+}
+
+.theme-toggle-btn:hover {
+    background: var(--toggle-hover);
+    transform: translateY(-1px);
+}
+
+/* Контейнер (Карточка) */
+.login-card {
+    position: relative;
+    background-color: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 26rem;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Заголовок */
+.header-wrapper {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    background: var(--text-title-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: var(--text-title);
+}
+
+.subtitle {
+    color: var(--text-subtitle);
+    font-size: 0.95rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Формы */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-label);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 0.75rem;
+    color: var(--input-text);
+    font-size: 1rem;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.form-control::placeholder {
+    color: var(--input-placeholder);
+}
+
+.form-control:focus {
+    background-color: var(--input-bg);
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
+
+/* Primary Button */
+.btn-primary {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(to right, #7c3aed, #db2777);
+    border: none;
+    border-radius: 0.75rem;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(219, 39, 119, 0.4);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: transparent;
+    border: 1px solid var(--btn-secondary-border);
+    border-radius: 0.75rem;
+    color: var(--btn-secondary-text);
+    font-weight: 600;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.btn-secondary:hover {
+    background-color: var(--btn-secondary-hover-bg);
+    color: var(--btn-secondary-hover-text);
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+/* Ошибки */
+.alert-error {
+    padding: 0.75rem;
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.alert-error-text {
+    color: var(--error-text);
+    font-size: 0.85rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Глаз (пароль) */
+.password-toggle {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--icon-color);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--icon-hover);
+}
+
+/* Ссылки */
+.footer-links {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-subtitle);
+}
+
+.link {
+    color: var(--link-color);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.link:hover {
+    color: var(--link-hover);
+}
+
+.instruction-text {
+    text-align: center;
+    color: var(--input-text);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}

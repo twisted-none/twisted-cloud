@@ -1,0 +1,10 @@
+export type Folder = { id: number; name: string; parent_id: number | null; owner_id: number };
+export type Note = { id: number; title: string; content: string; folder_id: number | null; owner_id: number; updated_at: string };
+export type Goal = { id: number; title: string; target: number; current: number; unit: string; deadline?: string | null; owner_id: number };
+export type NoteVersion = { id: number; note_id: number; title: string; content: string; created_at: string };
+export type View = "notes" | "goals";
+export type SearchResult = { kind: "note" | "folder" | "goal"; id: number; title: string; snippet?: string | null; folder_id?: number | null };
+export type Attachment = { id: number; note_id: number | null; original_name: string; content_type: string; size: number; url: string; created_at: string };
+export type VaultImportResult = { folders: number; notes: number };
+export type PublicShare = { token: string; note_id: number; url: string };
+export type TrashItem = { kind: "folder" | "note"; id: number; title: string; parent_id: number | null; deleted_at: string; expires_at: string };

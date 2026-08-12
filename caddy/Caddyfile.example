@@ -1,0 +1,16 @@
+# Insert these blocks into your existing Caddy config.
+# Caddy must be attached to the external Docker network `caddy_net`.
+
+vault-auth.176.108.255.248.sslip.io {
+	encode zstd gzip
+
+	reverse_proxy twisted_vault_keycloak:8080 {
+		header_up X-Forwarded-Proto https
+		header_up Host {host}
+	}
+}
+
+vault.176.108.255.248.sslip.io {
+	encode zstd gzip
+	reverse_proxy twisted_vault_frontend:80
+}

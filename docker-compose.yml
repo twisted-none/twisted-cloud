@@ -1,0 +1,154 @@
+services:
+  db:
+    container_name: twisted_vault_db
+    image: postgres:17-alpine
+    restart: unless-stopped
+    networks:
+      - default
+      - caddy_net
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-twisted_vault}
+      POSTGRES_USER: ${POSTGRES_USER:-vault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vault} -d ${POSTGRES_DB:-twisted_vault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    container_name: twisted_vault_backend
+    build: ./backend
+    restart: unless-stopped
+    networks:
+      default:
+      caddy_net:
+        aliases:
+          - twisted_vault_backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://vault:change-me@db:5432/twisted_vault}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-1440}
+      KEYCLOAK_ISSUER_URL: ${KEYCLOAK_ISSUER_URL:-https://vault-auth.176.108.255.248.sslip.io/realms/twisted-vault}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/twisted-vault/protocol/openid-connect/certs}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-twisted-vault-frontend}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://vault.176.108.255.248.sslip.io}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      MEDIA_ROOT: /data/media
+    volumes:
+      - media_data:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3).read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    container_name: twisted_vault_frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-https://vault-auth.176.108.255.248.sslip.io}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-twisted-vault}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-twisted-vault-frontend}
+    restart: unless-stopped
+    networks:
+      default:
+      caddy_net:
+        aliases:
+          - twisted_vault_frontend
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak-db:
+    container_name: twisted_vault_keycloak_db
+    image: postgres:15
+    restart: unless-stopped
+    networks:
+      - default
+      - caddy_net
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak-db}
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB:-keycloak}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    container_name: twisted_vault_keycloak
+    image: quay.io/keycloak/keycloak:23.0.0
+    restart: unless-stopped
+    networks:
+      default:
+      caddy_net:
+        aliases:
+          - twisted_vault_keycloak
+    command: start --import-realm
+    environment:
+      KC_PROXY: edge
+      KC_HOSTNAME: ${KEYCLOAK_HOST:-vault-auth.176.108.255.248.sslip.io}
+      KC_HTTP_ENABLED: "true"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me-keycloak-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak-db}
+    volumes:
+      - ./keycloak_config:/opt/keycloak/data/import:ro
+      - ./keycloak_theme:/opt/keycloak/themes:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+  backup:
+    container_name: twisted_vault_backup
+    image: postgres:17-alpine
+    restart: unless-stopped
+    networks:
+      - default
+      - caddy_net
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-vault}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      PGDATABASE: ${POSTGRES_DB:-twisted_vault}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-30}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup-loop.sh:/usr/local/bin/backup-loop.sh:ro
+    command: ["sh", "/usr/local/bin/backup-loop.sh"]
+
+volumes:
+  postgres_data:
+  media_data:
+  keycloak_postgres_data:
+
+networks:
+  caddy_net:
+    external: true
