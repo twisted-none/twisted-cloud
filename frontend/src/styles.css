@@ -40,7 +40,7 @@ img { max-width: 100%; border-radius: 6px; box-shadow: var(--shadow-subtle); }
 .public-share article { width: min(820px, 100%); margin: 0 auto; }
 .public-share h1 { font-size: 36px; line-height: 1.2; }
 
-.obsidian { min-height: 100vh; display: grid; grid-template-columns: 42px 300px minmax(0, 1fr); background: var(--color-abyss); color: var(--color-bright-gray); }
+.obsidian { height: 100vh; min-height: 0; display: grid; grid-template-columns: 42px 300px minmax(0, 1fr); overflow: hidden; background: var(--color-abyss); color: var(--color-bright-gray); }
 .app-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-right: 1px solid #343434; background: #202020; }
 .rail-button { width: 30px; height: 30px; padding: 0; border-radius: 6px; color: var(--color-muted-gray); }
 .rail-button.active { background: #303030; color: var(--color-bright-gray); }
@@ -61,7 +61,7 @@ img { max-width: 100%; border-radius: 6px; box-shadow: var(--shadow-subtle); }
 }
 .action-menu button { justify-content: flex-start; color: var(--color-bright-gray); }
 
-.vault-pane { min-height: 100vh; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-right: 1px solid #343434; background: var(--color-panel); overflow: auto; }
+.vault-pane { min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-right: 1px solid #343434; background: var(--color-panel); overflow: auto; }
 .vault-pane.drop-target { background: #28243a; }
 .vault-title { display: grid; gap: 2px; padding: 4px 6px 8px; }
 .vault-title strong { font-size: 13px; color: var(--color-bright-gray); }
@@ -90,7 +90,7 @@ img { max-width: 100%; border-radius: 6px; box-shadow: var(--shadow-subtle); }
 .tag-panel button { max-width: 100%; padding: 4px 8px; border-radius: 9999px; background: rgba(138, 92, 245, .15); color: var(--color-lavender); }
 .tag-panel button.active { background: var(--color-amethyst); color: var(--color-white); }
 
-.note-pane { min-height: 100vh; display: grid; grid-template-rows: 36px minmax(0, 1fr); background: var(--color-abyss); }
+.note-pane { min-height: 0; display: grid; grid-template-rows: 36px minmax(0, 1fr); overflow: hidden; background: var(--color-abyss); }
 .tab-bar { display: flex; align-items: end; gap: 4px; padding-left: 10px; border-bottom: 1px solid #303030; background: #202020; }
 .tab { max-width: 240px; height: 31px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-radius: 7px 7px 0 0; color: var(--color-medium-gray); overflow: hidden; white-space: nowrap; }
 .tab span { overflow: hidden; text-overflow: ellipsis; }
@@ -107,22 +107,24 @@ img { max-width: 100%; border-radius: 6px; box-shadow: var(--shadow-subtle); }
 .empty-note { display: grid; place-items: center; }
 .empty-note button { color: var(--color-lavender); }
 
-.workspace-body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.workspace-body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
 .workspace-body.with-history { grid-template-columns: minmax(0, 1fr) 280px; }
-.editor-shell { min-height: 0; overflow: auto; }
+.editor-shell { min-height: 0; overflow: hidden; }
 .editor-shell.split-view { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .editor-shell.wide .cm-scroller, .editor-shell.wide .rendered-markdown { padding-inline: 32px; }
 .code-editor, .rendered-markdown {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   width: 100%;
 }
 .rendered-markdown {
+  overflow: auto;
   padding: 16px min(11vw, 132px) 120px;
   color: var(--color-bright-gray);
   font-size: var(--editor-font-size, 16px);
   line-height: 1.65;
 }
-.cm-editor { min-height: 100%; background: transparent; color: var(--color-bright-gray); font-size: var(--editor-font-size, 16px); line-height: 1.65; }
+.cm-editor { height: 100%; background: transparent; color: var(--color-bright-gray); font-size: var(--editor-font-size, 16px); line-height: 1.65; }
 .cm-focused { outline: none !important; }
 .cm-scroller { font-family: inherit !important; padding: 16px min(11vw, 132px) 120px; }
 .cm-editor, .cm-editor *, .cm-content, .cm-line { caret-color: var(--color-white) !important; }
