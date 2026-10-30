@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Columns2, Download, Eraser, FileArchive, FilePlus2, Files, Folder as FolderIcon, History, Image, Link, LogOut, MoreVertical, Move, Pencil, RotateCcw, Save, Search, Settings, Tag, Trash2, Upload, X } from "lucide-react";
 import { api, downloadFromApi, downloadText } from "./api";
-import MarkdownCodeEditor from "./MarkdownCodeEditor";
+import MarkdownCodeEditor, { type MarkdownCodeEditorHandle } from "./MarkdownCodeEditor";
 import MarkdownPreview from "./MarkdownPreview";
 import type { Attachment, Folder, Note, NoteVersion, PublicShare, SearchResult, TrashItem, VaultImportResult } from "./types";
 
@@ -54,6 +54,12 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
   const mdImportRef = useRef<HTMLInputElement>(null);
   const vaultImportRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<MarkdownCodeEditorHandle>(null);
+  const [pendingImages, setPendingImages] = useState(0);
+  const activeNoteRef = useRef(activeNote);
+  activeNoteRef.current = activeNote;
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
 
   const noteTags = useMemo(() => new Map(notes.map((n) => [n.id, extractTags(n.content)])), [notes]);
   const allTags = useMemo(() => Array.from(new Set(Array.from(noteTags.values()).flat())).sort((a, b) => a.localeCompare(b)), [noteTags]);
@@ -92,7 +98,7 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
       if (event.altKey && event.key.toLowerCase() === "p") { event.preventDefault(); openPalette("file"); }
       if (event.ctrlKey && event.key.toLowerCase() === "s") { event.preventDefault(); if (activeNote) void saveNote(activeNote); }
       if (event.key === "F2") { event.preventDefault(); renameSelected(); }
-      if (event.key === "Delete") { event.preventDefault(); void deleteSelected(); }
+      if (event.key === "Delete" && !(event.target instanceof HTMLElement && event.target.closest("input, textarea, [contenteditable=true]"))) { event.preventDefault(); void deleteSelected(); }
       if (event.key === "Escape") { setDialog(null); setContextMenu(null); setMenuOpen(false); setPalette(null); setMoveState(null); setTrashOpen(false); }
     };
     window.addEventListener("keydown", onKeyDown, true);
@@ -108,18 +114,24 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
   }
   async function persistDraft() { return !dirty || !activeNote || Boolean(await saveNote(activeNote, false)); }
   function setDraft(patch: Partial<Note>) {
-    if (!activeNote) return;
-    const next = { ...activeNote, ...patch };
-    localStorage.setItem(draftKey(activeNote.id), JSON.stringify({ title: next.title, content: next.content, folder_id: next.folder_id }));
+    const current = activeNoteRef.current;
+    if (!current) return;
+    const next = { ...current, ...patch };
+    activeNoteRef.current = next;
+    localStorage.setItem(draftKey(current.id), JSON.stringify({ title: next.title, content: next.content, folder_id: next.folder_id }));
     setDirty(true); setStatus("Черновик"); setActiveNote(next);
   }
   async function saveNote(note: Note, manual = true) {
     try {
       setStatus("Сохранение...");
       const saved = await api<Note>(`/notes/${note.id}`, token, { method: "PUT", body: JSON.stringify(note) });
-      setNotes(notes.map((n) => n.id === saved.id ? saved : n));
-      localStorage.removeItem(draftKey(saved.id));
-      setActiveNote(saved); setDirty(false); setStatus(manual ? "Сохранено" : "Автосохранено");
+      setNotes(notesRef.current.map((n) => n.id === saved.id ? saved : n));
+      const current = activeNoteRef.current;
+      if (current?.id === note.id && current.content === note.content && current.title === note.title && current.folder_id === note.folder_id) {
+        localStorage.removeItem(draftKey(saved.id));
+        activeNoteRef.current = saved;
+        setActiveNote(saved); setDirty(false); setStatus(manual ? "Сохранено" : "Автосохранено");
+      }
       return saved;
     } catch (error) { showError(error); return null; }
   }
@@ -201,13 +213,18 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
       setStatus(`Импортировано: папок ${result.folders}, заметок ${result.notes}`); await reload();
     } catch (error) { showError(error); }
   }
-  async function uploadImage(file: File) {
-    if (!activeNote) return;
-    try {
-      const form = new FormData(); form.append("file", file);
-      const media = await api<Attachment>(`/media?note_id=${activeNote.id}`, token, { method: "POST", body: form });
-      setDraft({ content: `${activeNote.content}\n\n![${media.original_name}](${media.url})` });
-    } catch (error) { showError(error); }
+  async function uploadImage(file: File, signal: AbortSignal): Promise<string> {
+    if (!activeNote) throw new Error("Сначала откройте заметку");
+    const form = new FormData(); form.append("file", file);
+    const media = await api<Attachment>(`/media?note_id=${activeNote.id}`, token, { method: "POST", body: form, signal });
+    return media.url;
+  }
+  function onPendingImages(delta: number) {
+    setPendingImages((count) => Math.max(0, count + delta));
+    if (delta > 0) { setDirty(true); setStatus("Загрузка изображения…"); }
+  }
+  function showImageError(error: unknown) {
+    showError(new Error(`Ошибка загрузки: ${error instanceof Error ? error.message : "не удалось загрузить изображение"}`));
   }
   async function moveFolder(folderId: number, parent_id: number | null) {
     const folder = folders.find((f) => f.id === folderId);
@@ -406,7 +423,7 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
     {trashOpen && <TrashDialog items={trash} onClose={() => setTrashOpen(false)} onEmpty={() => void emptyTrash()} onRestore={(item) => void restoreTrashItem(item)} onDelete={(item) => void deleteTrashItem(item)}/>}
     <input ref={vaultImportRef} hidden type="file" accept=".zip,application/zip" onChange={(e) => e.target.files?.[0] && void importVault(e.target.files[0])}/>
     <input ref={mdImportRef} hidden type="file" accept=".md,text/markdown" onChange={(e) => e.target.files?.[0] && void importMarkdown(e.target.files[0])}/>
-    <input ref={imageRef} hidden type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(e) => e.target.files?.[0] && void uploadImage(e.target.files[0])}/>
+    <input ref={imageRef} hidden type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(e) => { editorRef.current?.insertImages(Array.from(e.target.files || [])); e.target.value = ""; }}/>
     <aside className="app-rail">
       <button className="rail-button active" title="Файлы"><Files size={19}/></button>
       <button className={`rail-button ${trashOpen ? "active" : ""}`} title="Корзина" onClick={() => void openTrash()}><Trash2 size={18}/></button>
@@ -438,7 +455,21 @@ export default function NotesView({ token, folders, notes, setFolders, setNotes,
       {activeNote ? <div className="note-workspace">
         <div className="note-actions"><input className="title-input" value={activeNote.title} onChange={(e) => setDraft({ title: e.target.value })}/><div className="toolbar"><button title="Редактировать" onClick={() => { setDirty(true); setStatus("Черновик"); }}><Pencil size={16}/></button><button title="Сохранить" onClick={() => void saveNote(activeNote)}><Save size={16}/></button><button title="Split" onClick={() => setSplitView(!splitView)}><Columns2 size={16}/></button><button title="История" onClick={() => setHistoryOpen(!historyOpen)}><History size={16}/></button><button title="Фото" onClick={() => imageRef.current?.click()}><Image size={16}/></button><button title="Экспорт .md" onClick={() => downloadText(`${activeNote.title}.md`, activeNote.content)}><Download size={16}/></button><button title="HTML" onClick={() => exportHtml(activeNote)}>HTML</button><button title="PDF" onClick={() => exportPdf(activeNote)}>PDF</button><button title="Публичная ссылка" onClick={() => void createShare(activeNote)}><Link size={16}/></button><button title="Настройки" onClick={() => setSettingsOpen(true)}><Settings size={16}/></button><button title="Удалить" onClick={() => void deleteItem({ kind: "note", id: activeNote.id })}><Trash2 size={16}/></button><span className={`status ${status.includes("Ошибка") ? "error" : ""}`}>{status}</span></div></div>
         <div className={`workspace-body ${historyOpen ? "with-history" : ""}`}>
-          <div className={`editor-shell ${splitView ? "split-view" : ""} ${settings.wideEditor ? "wide" : ""}`} style={{ ["--editor-font-size" as string]: `${settings.fontSize}px` }}>{dirty || splitView ? <MarkdownCodeEditor value={activeNote.content} onChange={(content) => setDraft({ content })} autoFocus/> : null}{splitView && <div className="rendered-markdown"><MarkdownPreview content={activeNote.content}/></div>}{!dirty && !splitView && <div className="rendered-markdown" onDoubleClick={() => setDirty(true)}><MarkdownPreview content={activeNote.content}/></div>}</div>
+          <div className={`editor-shell ${splitView ? "split-view" : ""} ${settings.wideEditor ? "wide" : ""}`} style={{ ["--editor-font-size" as string]: `${settings.fontSize}px` }}>
+            <MarkdownCodeEditor
+              key={activeNote.id}
+              ref={editorRef}
+              value={activeNote.content}
+              onChange={(content) => setDraft({ content })}
+              onUploadImage={uploadImage}
+              onUploadError={showImageError}
+              onPendingImages={onPendingImages}
+              hidden={!dirty && !splitView && pendingImages === 0}
+              autoFocus
+            />
+            {splitView && <div className="rendered-markdown"><MarkdownPreview content={activeNote.content}/></div>}
+            {!dirty && !splitView && pendingImages === 0 && <div className="rendered-markdown" onDoubleClick={() => setDirty(true)}><MarkdownPreview content={activeNote.content}/></div>}
+          </div>
           {historyOpen && <aside className="history-panel"><h2>История</h2>{versions.map((v) => <button key={v.id} onClick={() => void restoreVersion(v)}><b>{new Date(v.created_at).toLocaleString()}</b><span>{v.title}</span></button>)}</aside>}
         </div>
       </div> : <div className="empty-note"><button onClick={() => void createNote(activeFolder)}>Создать новую заметку</button></div>}

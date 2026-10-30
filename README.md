@@ -17,7 +17,7 @@ The app is intended to run as a Docker Compose stack behind Caddy.
 - Search filters: `tag:`, `folder:`, `title:`, `content:`.
 - Tags extracted from `#tag` syntax.
 - Daily note and note templates.
-- Image uploads into notes.
+- Image uploads through the photo button or clipboard paste (Ctrl+V / Cmd+V), with inline image previews in the editor. PNG, JPEG, GIF and WebP are supported, up to 8 MiB per image.
 - Export note as `.md`, `.html`, or PDF through browser print.
 - Import/export the whole vault as `.zip`.
 - Public read-only share links for individual notes.
@@ -102,6 +102,16 @@ docker compose logs --tail 80 keycloak
 The frontend container serves static files through Nginx. API calls are proxied from `/api/` to the backend service.
 
 ## Verification
+
+Run the editor regression tests with Node.js 22.6 or newer:
+
+```powershell
+cd frontend
+npm test
+npm run test:browser
+```
+
+The browser fixture is at `http://127.0.0.1:5178/tests/editor-images.html`. It uses fake notes and a fake API; no backend or real account is needed. Check image and plain-text paste, delayed and failed uploads, typing during upload/save, switching notes, save/reopen, and undo/redo. In a real note, enter edit mode, place the cursor, and paste a screenshot. Images remain Markdown attachments when saved.
 
 Build API and frontend images:
 

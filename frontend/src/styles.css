@@ -134,6 +134,10 @@ img { max-width: 100%; border-radius: 6px; box-shadow: var(--shadow-subtle); }
 }
 .cm-fat-cursor { background: var(--color-white) !important; color: var(--color-abyss) !important; }
 .cm-placeholder { color: var(--color-muted-gray); }
+.code-editor[hidden] { display: none; }
+.cm-note-image { display: inline-block; max-width: 100%; vertical-align: middle; }
+.cm-note-image img, .rendered-markdown img { display: block; max-width: 100%; height: auto; max-height: 70vh; object-fit: contain; }
+.cm-image-upload { color: var(--color-muted-gray); font-size: 0.875em; }
 .cm-gutters { display: none !important; }
 .cm-activeLine { background: transparent !important; }
 .rendered-markdown { overflow-wrap: anywhere; }

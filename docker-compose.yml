@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-vault}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /srv/projects/data/twisted-cloud/postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vault} -d ${POSTGRES_DB:-twisted_vault}"]
       interval: 10s
@@ -41,7 +41,7 @@ services:
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
       MEDIA_ROOT: /data/media
     volumes:
-      - media_data:/data/media
+      - /srv/projects/data/twisted-cloud/media-data:/data/media
     depends_on:
       db:
         condition: service_healthy
@@ -88,7 +88,7 @@ services:
       POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
       POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak-db}
     volumes:
-      - keycloak_postgres_data:/var/lib/postgresql/data
+      - /srv/projects/data/twisted-cloud/keycloak-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB:-keycloak}"]
       interval: 5s
@@ -140,14 +140,11 @@ services:
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
       BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-30}
     volumes:
-      - ./backups:/backups
+      - /srv/projects/data/twisted-cloud/backups:/backups
       - ./scripts/backup-loop.sh:/usr/local/bin/backup-loop.sh:ro
+      - /srv/projects/data/twisted-cloud/db-backup-scratch:/var/lib/postgresql/data
     command: ["sh", "/usr/local/bin/backup-loop.sh"]
 
-volumes:
-  postgres_data:
-  media_data:
-  keycloak_postgres_data:
 
 networks:
   caddy_net:

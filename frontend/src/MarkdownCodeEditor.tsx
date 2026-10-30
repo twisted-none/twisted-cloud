@@ -1,11 +1,22 @@
-import React, { useEffect, useRef } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorState } from "@codemirror/state";
+import { Annotation, EditorState, Transaction } from "@codemirror/state";
 import { EditorView, keymap, placeholder } from "@codemirror/view";
+import { imagePreviews, imageUploadPlugin, pendingImages, type UploadImage } from "./editorImages";
 
-type Props = { value: string; onChange: (value: string) => void; autoFocus?: boolean };
+type Props = {
+  value: string;
+  onChange: (value: string) => void;
+  onUploadImage: UploadImage;
+  onUploadError: (error: unknown) => void;
+  onPendingImages: (delta: number) => void;
+  autoFocus?: boolean;
+  hidden?: boolean;
+};
+export type MarkdownCodeEditorHandle = { insertImages: (files: File[]) => void };
+const externalValue = Annotation.define<boolean>();
 
 const editorTheme = EditorView.theme({
   "&": { caretColor: "#ffffff" },
@@ -25,15 +36,23 @@ const editorTheme = EditorView.theme({
   },
 });
 
-export default function MarkdownCodeEditor({ value, onChange, autoFocus = false }: Props) {
+export default forwardRef<MarkdownCodeEditorHandle, Props>(function MarkdownCodeEditor(props, ref) {
+  const { value, autoFocus = false, hidden = false } = props;
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const onChangeRef = useRef(onChange);
+  const callbacks = useRef(props);
+  callbacks.current = props;
+  const insertImages = useRef<(files: File[]) => void>(() => {});
 
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useImperativeHandle(ref, () => ({ insertImages: (files) => insertImages.current(files) }), []);
 
   useEffect(() => {
     if (!hostRef.current) return;
+    const uploads = imageUploadPlugin(
+      (file, signal) => callbacks.current.onUploadImage(file, signal),
+      (error) => callbacks.current.onUploadError(error),
+      (delta) => callbacks.current.onPendingImages(delta),
+    );
     const view = new EditorView({
       parent: hostRef.current,
       state: EditorState.create({
@@ -41,27 +60,43 @@ export default function MarkdownCodeEditor({ value, onChange, autoFocus = false 
         extensions: [
           history(),
           markdown(),
+          pendingImages,
+          imagePreviews,
+          uploads,
           EditorView.lineWrapping,
           editorTheme,
           placeholder("Начните писать markdown..."),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) onChangeRef.current(update.state.doc.toString());
+            if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(externalValue))) {
+              callbacks.current.onChange(update.state.doc.toString());
+            }
           }),
         ],
       }),
     });
     viewRef.current = view;
-    if (autoFocus) view.focus();
-    return () => { view.destroy(); viewRef.current = null; };
+    insertImages.current = (files) => { void view.plugin(uploads)?.insert(files); };
+    if (autoFocus && !hidden) view.focus();
+    return () => { insertImages.current = () => {}; view.destroy(); viewRef.current = null; };
   }, []);
 
   useEffect(() => {
     const view = viewRef.current;
     if (!view || view.state.doc.toString() === value) return;
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+      annotations: [externalValue.of(true), Transaction.addToHistory.of(false)],
+    });
   }, [value]);
 
-  return <div className="code-editor" ref={hostRef} />;
-}
+  useEffect(() => {
+    if (!hidden) {
+      viewRef.current?.requestMeasure();
+      if (autoFocus) viewRef.current?.focus();
+    }
+  }, [hidden, autoFocus]);
+
+  return <div className="code-editor" ref={hostRef} hidden={hidden} />;
+});

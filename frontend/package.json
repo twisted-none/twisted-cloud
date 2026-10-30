@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:browser": "node tests/editor-images-server.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0"
